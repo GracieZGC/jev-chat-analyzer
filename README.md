@@ -61,4 +61,4 @@ python3 server.py --pool     # 查看低置信度回流池内容
 
 ## 许可证
 
-本仓库暂未指定许可证，公开发布前请添加 LICENSE 文件。
+本项目采用 [MIT 许可证](./LICENSE)，详见 LICENSE 文件。

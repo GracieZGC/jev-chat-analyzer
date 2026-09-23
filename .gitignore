@@ -4,6 +4,7 @@
 .env
 .env.*
 *.env
+!.env.example
 
 # ===== WorkBuddy 内部目录（含工作日志 / 项目记忆 / 作者私人信息） =====
 .workbuddy/

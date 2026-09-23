@@ -223,7 +223,7 @@ SEED = json.loads((HERE / 'intents_seed.json').read_text(encoding='utf-8'))
 INTENT_DEFS = SEED['intents']      # label -> {definition, scenarios, count}
 EMOTION_DEFS = SEED['emotions']    # label -> {definition, scenarios, count}
 try:
-    for line in (ROOT / '.env').read_text(encoding='utf-8').splitlines():
+    for line in ENV_PATH.read_text(encoding='utf-8').splitlines():
         if line.strip() and not line.lstrip().startswith('#') and '=' in line:
             key, value = line.split('=', 1)
             os.environ.setdefault(key.strip(), value.strip().strip('"').strip("'"))

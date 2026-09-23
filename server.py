@@ -9,16 +9,20 @@
   python3 server.py --check   跑夹具，结果写 3_产物/情绪分类器-v002/test-results.json
 也可以直接双击同目录的「启动.command」，它会启动服务并自动打开页面。
 """
+import http.client
+import io
 import json
 import math
 import os
 import re
+import socket
+import ssl
 import sys
 import threading
 import time
-import os
 import traceback
 import urllib.error
+import urllib.parse
 import urllib.request
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
@@ -52,6 +56,72 @@ class JevAPIError(Exception):
 
 class GeneralLLMError(Exception):
     """DeepSeek 等通用大模型调用失败（与 Jev 分类错误分开处理，避免拖垮整次分析）。"""
+
+
+class _ResolvedHTTPSConnection(http.client.HTTPSConnection):
+    """连接指定 IP，但仍用原域名完成 SNI 与证书校验。"""
+
+    def __init__(self, host, connect_ip, **kwargs):
+        self._connect_ip = connect_ip
+        super().__init__(host, **kwargs)
+
+    def connect(self):
+        raw = socket.create_connection(
+            (self._connect_ip, self.port), self.timeout, self.source_address)
+        self.sock = self._context.wrap_socket(raw, server_hostname=self.host)
+
+
+def _direct_https_request(host, connect_ip, method, path, body=None, headers=None, timeout=40):
+    """绕过本机 DNS 发 HTTPS；域名校验仍开启，不降低 TLS 安全性。"""
+    conn = _ResolvedHTTPSConnection(
+        host, connect_ip, timeout=timeout, context=ssl.create_default_context())
+    try:
+        conn.request(method, path, body=body, headers=headers or {})
+        response = conn.getresponse()
+        raw = response.read()
+        return response.status, response.reason, dict(response.getheaders()), raw
+    finally:
+        conn.close()
+
+
+def _resolve_with_encrypted_dns(host):
+    """通过固定入口访问 Cloudflare DoH，避开本地/运营商对普通 DNS 的错误解析。"""
+    query = '/dns-query?' + urllib.parse.urlencode({'name': host, 'type': 'A'})
+    status, _reason, _headers, raw = _direct_https_request(
+        'cloudflare-dns.com', '1.1.1.1', 'GET', query,
+        headers={'Accept': 'application/dns-json'}, timeout=12)
+    if status != 200:
+        raise OSError('加密 DNS 返回 HTTP {}'.format(status))
+    payload = json.loads(raw.decode('utf-8'))
+    for answer in payload.get('Answer') or []:
+        value = str(answer.get('data') or '')
+        if answer.get('type') == 1 and re.fullmatch(r'(?:\d{1,3}\.){3}\d{1,3}', value):
+            return value
+    raise OSError('加密 DNS 没有返回 IPv4 地址')
+
+
+def _open_json_with_dns_fallback(request, timeout=40):
+    """正常请求优先；仅在连接层失败时使用加密 DNS 重试。"""
+    try:
+        with urllib.request.urlopen(request, timeout=timeout) as response:
+            return json.load(response)
+    except urllib.error.HTTPError:
+        raise
+    except (urllib.error.URLError, TimeoutError, ConnectionError, ssl.SSLError, OSError) as original:
+        if os.getenv('GENERAL_LLM_DNS_FALLBACK', '1').lower() in ('0', 'false', 'off', 'no'):
+            raise original
+        parts = urllib.parse.urlsplit(request.full_url)
+        if parts.scheme != 'https' or not parts.hostname:
+            raise original
+        connect_ip = _resolve_with_encrypted_dns(parts.hostname)
+        path = urllib.parse.urlunsplit(('', '', parts.path or '/', parts.query, ''))
+        status, reason, headers, raw = _direct_https_request(
+            parts.hostname, connect_ip, request.get_method(), path,
+            body=request.data, headers=dict(request.header_items()), timeout=timeout)
+        if status >= 400:
+            raise urllib.error.HTTPError(
+                request.full_url, status, reason, headers, io.BytesIO(raw))
+        return json.loads(raw.decode('utf-8'))
 
 
 def _parse_json_content(content):
@@ -151,8 +221,7 @@ def call_general_llm(relationship, context, message, speaker, intent_result, emo
             url, data=json.dumps(body, ensure_ascii=False).encode(),
             headers={'Authorization': 'Bearer ' + key, 'Content-Type': 'application/json'})
         try:
-            with urllib.request.urlopen(request, timeout=40) as response:
-                payload = json.load(response)
+            payload = _open_json_with_dns_fallback(request, timeout=40)
         except urllib.error.HTTPError as exc:
             detail = ''
             try:

@@ -344,7 +344,9 @@ function syncPeople(){
       // 没有明确写「我」时不猜测角色；无论 1 人还是多人，
       // 第 2 步都不自动勾选，必须由用户明确选择分析对象。
       ME=people.find(p=>ME_WORDS.includes(p.label))?.label||null;
-      READ=new Set();
+      // 默认把识别到的人都列为分析对象；用户可以取消不想分析的人。
+      // “我是谁”仍然完全可选，不参与默认对象推断。
+      READ=new Set(people.map(p=>p.label));
     }
   }
   paintPeople();

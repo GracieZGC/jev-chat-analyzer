@@ -225,7 +225,7 @@ const TS_RE=/^(?:(?:\d{4}年)?\d{1,2}月\d{1,2}日|\d{4}[-\/]\d{1,2}[-\/]\d{1,2}
 // 微信昵称可以包含英文句号，例如「Mr.Wang」；它后面必须跟时间行。
 const NAME_PUNCT=/[。！？，、；：,!?;]/;
 function isNameLine(line){
-  return !!line&&line.length<=24&&line.indexOf(':')<0&&line.indexOf('：')<0&&!TS_RE.test(line)&&!NAME_PUNCT.test(line);
+  return !!line&&line.length<=64&&line.indexOf(':')<0&&line.indexOf('：')<0&&!TS_RE.test(line)&&!NAME_PUNCT.test(line);
 }
 let PEOPLE=[],ME=null,READ=new Set(),LAST_KEY='',USER_TOUCHED=false;
 function detectPeople(text){
@@ -242,12 +242,12 @@ function detectPeople(text){
     if(!line)continue;
     const next=lines[i+1]||'';
     if(next&&TS_RE.test(next)&&isNameLine(line)){bump(line,lines[i+2]||'');i++;continue;}
-    const m=/^\s*([^：:\n]{1,12}?)\s*[:：]\s*(.+)$/.exec(line);
+    const m=/^\s*([^：:\n]{1,64}?)\s*[:：]\s*(.+)$/.exec(line);
     if(m&&!TS_RE.test(line))bump(m[1].trim(),m[2].trim());
   }
   const people=order.map(label=>({label:label,count:counts[label]||0,sample:samples[label]||'',self:selfHits[label]||0}));
-  const hasKnown=order.some(l=>ME_WORDS.includes(l)||OTHER_WORDS.includes(l));
-  return (hasKnown||people.length>=2)?people:[];
+  // 只要识别到有效聊天块，单人记录也保留，后续由用户在第 2 步明确选择分析对象。
+  return order.length?people:[];
 }
 // 猜「我是谁」：优先明示代称，其次谁的话里自称「我」最多（最像在说自己）。
 function guessMe(people){
@@ -274,7 +274,8 @@ function chips(){
   if(!PEOPLE.length){wrap.hidden=true;$('meChips').replaceChildren();$('readChips').replaceChildren();paintControls();return;}
   wrap.hidden=false;
   const solo=PEOPLE.length<2;          // 只有一个说话人：分不出「我是谁」
-  $('meStep').hidden=solo;
+  $('meStep').hidden=false;
+  $('meStep').querySelector('.stepl').textContent='第 1 步 · 我是谁（可选）';
   $('meChips').replaceChildren(...PEOPLE.map(p=>{
     const b=el('button',p.label,'chip'+(p.label===ME?' is-me':''));
     b.type='button';b.append(el('small',p.count+' 条'));
@@ -310,19 +311,14 @@ function syncPeople(){
     if(!people.length){ME=null;READ=new Set();USER_TOUCHED=false;}
     else if(USER_TOUCHED){
       // 用户改过：他说的话优先保留，只剔除这次对话里已经没有的人。
-      if(people.length<2)ME=null;
-      else if(!(ME&&people.some(p=>p.label===ME)))ME=guessMe(people);
+      if(!(ME&&people.some(p=>p.label===ME)))ME=people.find(p=>ME_WORDS.includes(p.label))?.label||null;
       READ=new Set(people.filter(p=>rememberedRead.includes(p.label)).map(p=>p.label));
-      // 只剩一个人且用户没勾过他：补勾上，避免「按钮禁用但无选项」的死路。
-      if(people.length===1&&!READ.size)READ=new Set(people.map(p=>p.label));
+      // 单人时也必须由用户明确选择第 2 步的分析对象，不自动替他勾选。
     }else{
-      // 只有一个说话人时分不出「我是谁」，ME 留空（服务端全部按对方处理）。
-      ME=people.length>=2?guessMe(people):null;
-      // 1 人：唯一可解读的就是他，直接勾上（否则按钮禁用却没东西可点）
-      // 2 人：默认勾对方；≥3 人不替用户做主，让他自己挑。
-      READ=people.length===1?new Set(people.map(p=>p.label))
-        :people.length===2?new Set(people.filter(p=>p.label!==ME).map(p=>p.label))
-        :new Set();
+      // 没有明确写「我」时不猜测角色；无论 1 人还是多人，
+      // 第 2 步都不自动勾选，必须由用户明确选择分析对象。
+      ME=people.find(p=>ME_WORDS.includes(p.label))?.label||null;
+      READ=new Set();
     }
   }
   paintPeople();

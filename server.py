@@ -769,7 +769,10 @@ def record_low_confidence(relationship, item, flags):
         print('[pool] 回流池写入失败：', exc, flush=True)
 
 
-LABEL_RE = re.compile(r'^([^：:\n]{1,12}?)\s*[:：]\s*(.+)$')
+# 说话人标签既可能是「我」「她」，也可能是英文昵称、邮箱式昵称或带
+# 下划线/短横线/句点的真实姓名。长度不要按中文姓名限制，否则像
+# ``Alexandra Johnson: ...`` 这类手动标注会被整行当成普通文本。
+LABEL_RE = re.compile(r'^([^：:\n]{1,64}?)\s*[:：]\s*(.+)$')
 ME_WORDS = ('我', '我方', '自己', '本人')
 OTHER_WORDS = ('她', '他', '对方', 'TA', 'ta', 'Ta', 'tA', '对方昵称')
 
@@ -783,7 +786,7 @@ NAME_PUNCT_RE = re.compile(r'[。！？，、；：,!?;]')
 
 
 def _is_name_line(line):
-    return bool(line) and len(line) <= 24 and ':' not in line and '：' not in line \
+    return bool(line) and len(line) <= 64 and ':' not in line and '：' not in line \
         and not TS_RE.match(line) and not NAME_PUNCT_RE.search(line)
 
 
@@ -835,8 +838,10 @@ def parse_transcript(text, me_label=None):
     for block in blocks:
         if block[1] not in candidates:
             candidates.append(block[1])
-    known = [label for label in candidates if label in ME_WORDS or label in OTHER_WORDS]
-    labelled = bool(known) or len(candidates) >= 2
+    # 微信复制格式即使只有一个说话人，也已经由「姓名 + 时间行」明确
+    # 标出了消息边界；不能再要求至少两个不同姓名，否则单人记录会被
+    # 误报为“没有识别到说话人”。标签式格式同理，只要成功扫描到块即可。
+    labelled = bool(blocks)
 
     messages = []
     if labelled:
@@ -851,11 +856,8 @@ def parse_transcript(text, me_label=None):
             if label in ME_WORDS:
                 me_label = label
                 break
-    if me_label is None and candidates:
-        # 没有「我」这类词时，在「非对方代称」的名字里取第一个当默认「我」。
-        # 若整段只有「她：」「对方：」这类代称，则不指定「我」，全部按对方处理。
-        unnamed = [label for label in candidates if label not in OTHER_WORDS]
-        me_label = unnamed[0] if unnamed else None
+    # 没有明确写出「我」时，不猜测角色。用户可能只想分析群聊，
+    # 也可能本人根本没有在这段记录里发言；分析对象由 read_labels 明确选择。
     for item in messages:
         item['speaker'] = 'me' if item['label'] is not None and item['label'] == me_label else 'other'
     speakers = [{'label': label, 'role': 'me' if label == me_label else 'other',

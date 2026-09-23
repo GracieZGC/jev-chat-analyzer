@@ -16,6 +16,7 @@ import re
 import sys
 import threading
 import time
+import os
 import traceback
 import urllib.error
 import urllib.request
@@ -25,7 +26,8 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 VERSION = 'v008'   # v008：情绪回分类层兜底（无情绪信号就显示「无明显情绪」，不硬挑二级标签）；
 # 生成层删掉长解读，只保留「潜台词」+ 三条建议，输出变短 → 明显提速。
-PORT = 8767
+# 端口：默认 8767；可用环境变量 PORT 覆盖（方便「手机UI」副本与原项目同时运行）
+PORT = int(os.environ.get('PORT', '8767'))
 
 
 class JevConnectionError(Exception):

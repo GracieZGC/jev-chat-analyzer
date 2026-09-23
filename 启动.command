@@ -12,7 +12,10 @@
 # 却完全没生效。现在会比对版本，不一样就问要不要停掉重起。
 cd "$(dirname "$0")" || exit 1
 
-PORT=8767
+# 手机UI 副本默认跑在 8768，避开原项目的 8767，这样两个版本可以同时开着对照。
+# 想改端口：在终端里 `PORT=9000 ./启动.command` 即可。
+PORT="${PORT:-8768}"
+export PORT
 URL="http://127.0.0.1:$PORT"
 
 # 双击打开时 Terminal 给的 PATH 只有 /usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin，

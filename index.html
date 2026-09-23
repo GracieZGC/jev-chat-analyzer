@@ -1,19 +1,56 @@
 <!doctype html>
-<html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>恋爱职场大侦探</title>
+<html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>恋爱职场大侦探</title>
 <style>
-:root{font-family:system-ui,-apple-system,"PingFang SC",sans-serif;color:#202027;background:#f6f7fb;font-size:16px}*{box-sizing:border-box}html,body{height:100%}body{margin:0;display:flex;flex-direction:column}[hidden]{display:none!important}
-header{padding:16px 5vw;border-bottom:1px solid #dddde7;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;flex:none}header b{font-size:17px}
+:root{font-family:system-ui,-apple-system,"PingFang SC",sans-serif;color:#202027;background:#f6f7fb;font-size:16px}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{height:100%}
+body{margin:0;display:flex;align-items:center;justify-content:center;background:#c9ccd1;font-family:system-ui,-apple-system,"PingFang SC",sans-serif}
+
+/* ===== 手机外壳 ===== */
+.phone{position:relative;width:100%;max-width:430px;height:100dvh;background:#ededed;display:flex;flex-direction:column;overflow:hidden}
+@media(min-width:480px){.phone{height:min(920px,96vh);margin:2vh auto;border-radius:42px;box-shadow:0 24px 70px rgba(0,0,0,.28);border:11px solid #0c0c0e}}
+.statusbar{flex:none;height:46px;background:#ededed;display:flex;align-items:center;justify-content:space-between;padding:0 22px;font-size:14px;font-weight:600;color:#111;position:relative}
+.sb-time{font-variant-numeric:tabular-nums;letter-spacing:.3px}
+.sb-island{position:absolute;left:50%;top:9px;transform:translateX(-50%);width:118px;height:30px;background:#000;border-radius:16px}
+.sb-right{display:flex;align-items:center;gap:6px}
+.appbar{flex:none;height:50px;background:#ededed;display:flex;align-items:center;justify-content:flex-end;padding:0 10px 0 14px;border-bottom:1px solid #d9d9dc;position:relative}
+.appbar-center{position:absolute;left:24px;right:54px;top:0;bottom:0;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none}
+.appbar-center strong{font-size:16px;font-weight:600;color:#111;line-height:1.15}
+.appbar-center small{font-size:11px;color:#8a8a8a;line-height:1.2;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.appbar-more{margin-left:auto;background:none;border:0;font-size:26px;line-height:1;color:#111;padding:6px 10px;cursor:pointer}
+.appbar-more:active{opacity:.5}
+
+/* ===== 聊天区 ===== */
+.appbody{flex:1 1 auto;min-height:0;display:flex;flex-direction:column;background:#ededed}
+.wx-flow{flex:1 1 auto;min-height:0;background:#ededed;padding:12px 12px 18px;overflow-y:auto;overscroll-behavior:contain;display:flex;flex-direction:column;gap:14px}
+.wx-bar{flex:none;border-top:1px solid #e0e0e2;background:#f7f7f7;display:flex;flex-direction:column;gap:8px;padding:10px 14px 12px}
+.reply-dock{border:0;padding:0;min-width:0;margin:0}
+.send-row{display:flex;align-items:center;justify-content:flex-end;gap:12px;white-space:nowrap;color:#9a9a9a;font-size:12px}
+
+/* ===== 分析后操作条 ===== */
+#augmentBar{flex:none;display:flex;flex-wrap:wrap;gap:10px;align-items:center;padding:10px 14px;background:#e6e6e8;border-top:1px solid #d6d6d8}
+#augmentBar[hidden]{display:none}
+#augmentBar .aug-row{padding:0;margin:0;gap:10px}
+#augmentBar .aug-btn{padding:8px 14px;font-size:13px}
+#augmentBar .muted{font-size:12px;margin:0}
+
+/* ===== 底部上滑抽屉（导入聊天） ===== */
+.sheet{position:absolute;left:0;right:0;bottom:0;max-height:90%;background:#fff;border-radius:18px 18px 0 0;transform:translateY(100%);transition:transform .25s ease;z-index:30;overflow-y:auto;padding:6px 18px calc(20px + env(safe-area-inset-bottom))}
+.sheet.open{transform:translateY(0)}
+.sheet-grip{width:38px;height:4px;border-radius:2px;background:#d2d2d6;margin:8px auto 2px}
+.sheet-title{font-size:16px;font-weight:600;color:#202027;text-align:center;margin:2px 0 12px}
+.sheet-mask{position:absolute;inset:0;background:rgba(0,0,0,.45);z-index:25;display:none}
+.sheet.open ~ .sheet-mask{display:block}
+
+/* ===== 组件（气泡 / 分析卡 / 回复 / chips / 弹窗，全部保留原样式） ===== */
 small,.muted{color:#686876;font-size:14px}
-main{flex:1 1 auto;min-height:0;display:flex;flex-direction:column;width:100%;max-width:1240px;margin:0 auto;padding:14px 20px 18px}
 label{display:block;margin:18px 0 8px;font-weight:600;font-size:13px}
 textarea,select{font:inherit;font-size:13px;width:100%;border:1px solid #d6d6e1;background:#fafaff;border-radius:12px;padding:12px;color:inherit}
 textarea{resize:vertical;min-height:105px;line-height:1.6}
 textarea:focus,select:focus{outline:2px solid #07c160;outline-offset:2px}
 button{font:inherit;cursor:pointer;border:1px solid #d6d6e1;border-radius:10px;padding:10px 14px;background:white;color:inherit}
 button:hover{border-color:#c3c3cc}button:disabled{opacity:.55;cursor:wait}
-#drawerBtn{background:#fff;border:0;border-radius:6px;padding:9px 22px;font-size:14px;color:#202027;box-shadow:0 1px 2px rgba(0,0,0,.06)}
-#drawerBtn:hover{background:#f2f2f5;border:0;box-shadow:0 1px 3px rgba(0,0,0,.1)}
-#drawerBtn:focus-visible{outline:2px solid #c3c3cc;outline-offset:2px}
 .primary{background:#07c160;color:white;border:0;width:100%;padding:14px;margin-top:22px;font-weight:600;font-size:13px}
 .primary:hover{background:#06ad56}
 #status{min-height:24px;margin-top:12px;font-size:13px;color:#6b6b78}
@@ -21,24 +58,8 @@ button:hover{border-color:#c3c3cc}button:disabled{opacity:.55;cursor:wait}
 .toggle{display:flex;gap:10px;align-items:flex-start;margin-top:18px;font-weight:400;font-size:13px;line-height:1.6;color:#4a4a55}
 .toggle input{margin-top:3px;width:16px;height:16px;flex:none;accent-color:#07c160}
 .notice{border:1px solid #f0c9a0;background:#fff6ec;color:#8a5308;border-radius:14px;padding:14px 16px;line-height:1.7;margin:0 0 18px;font-size:14px}#notice[hidden]{display:none}
-.wx-wrap{position:relative;overflow:hidden;border-radius:8px;flex:1 1 auto;min-height:280px}
-.wx{display:grid;grid-template-columns:196px 1fr;grid-template-rows:100%;background:#fff;border:1px solid #dcdcdc;border-radius:8px;overflow:hidden;height:100%}
-.wx-side{background:#ededed;border-right:1px solid #dcdcdc;padding:12px 10px;min-height:0;overflow-y:auto}
-.wx-side .brand{font-size:14px;font-weight:600;margin-bottom:12px}
-.wx-search{background:#dcdcdc;border-radius:4px;padding:5px 9px;color:#7f7f7f;font-size:12px;margin-bottom:12px}
-.wx-item{display:flex;gap:9px;align-items:center;padding:9px 8px;border-radius:4px}
-.wx-item.on{background:#c9c9c9}
-.wx-item b{display:block;font-size:14px;font-weight:400}
-.wx-item small{display:block;font-size:12px;color:#8a8a8a;max-width:124px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .wx-av{width:36px;height:36px;border-radius:4px;background:#b4b4b4;color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;flex:none}
 .wx-av.me{background:#7fb98a}
-.wx-main{display:flex;flex-direction:column;min-width:0;min-height:0;overflow:hidden}
-.wx-title{height:56px;flex:none;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:0 18px;background:#f5f5f5;border-bottom:1px solid #e3e3e3}
-.wx-title strong{font-size:14px;font-weight:600}
-.wx-flow{flex:1 1 auto;min-height:0;background:#f5f5f5;padding:18px 22px;overflow-y:auto;overscroll-behavior:contain;display:flex;flex-direction:column;gap:14px}
-.wx-bar{min-height:54px;flex:none;border-top:1px solid #e3e3e3;background:#f5f5f5;display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:end;column-gap:16px;padding:10px 18px 12px;color:#9a9a9a;font-size:12px}
-.send-row{grid-column:2;grid-row:1;height:auto;display:flex;align-items:center;justify-content:flex-end;gap:12px;white-space:nowrap}
-.reply-dock{grid-column:1;grid-row:1;border:0;padding:0;min-width:0}
 .row{display:flex;gap:10px;align-items:flex-start}
 .row.me{flex-direction:row-reverse}
 .col{min-width:0;max-width:78%;display:flex;flex-direction:column;align-items:flex-start}
@@ -59,19 +80,13 @@ button:hover{border-color:#c3c3cc}button:disabled{opacity:.55;cursor:wait}
 .ntxt{font-size:13px;color:#5d6470;line-height:1.55}
 .basis{display:flex;align-items:flex-start;gap:7px;margin-top:10px;padding-top:9px;border-top:.5px solid #eef0f4}
 .basis .ntxt{font-size:13px;color:#454b56}
-.compact-line{display:flex;align-items:baseline;flex-wrap:wrap;gap:0 10px;font-size:14px;line-height:1.55;color:#20242c}
-.compact-line strong{font-weight:600}
-.compact-intent{font-weight:600;white-space:nowrap}
-.compact-basis{margin-top:8px;color:#454b56;font-size:13px;line-height:1.6}
-.compact-basis strong{font-weight:600;color:#727987}
-.intent-emotion-line{display:flex;align-items:baseline;flex-wrap:wrap;gap:0 10px;font-size:12px!important;line-height:1.45;font-weight:400;color:#454b56}
-.intent-emotion-line .metric{white-space:nowrap}
+.intent-emotion-line{display:flex;flex-direction:column;gap:3px;font-size:12px!important;line-height:1.45;font-weight:400;color:#454b56}
+.intent-emotion-line .metric{white-space:normal}
 .intent-emotion-line .metric-label{font-weight:600;color:#303641}
 .intent-emotion-line .metric-value{font-weight:400;color:#454b56}
-.intent-emotion-line .divider{color:#98a0ab;font-weight:400}
+.intent-emotion-line .divider{display:none}
 .interpretation{margin-top:6px;color:#454b56!important;font-size:12px!important;font-weight:400;line-height:1.45}
 .interpretation strong{font-weight:600;color:#303641}
-/* 细粒度说法：标签库给锚点，这一行给具体语义（由 DeepSeek 生成，拿不到就不显示）。 */
 .intent-detail{margin-top:4px;color:#454b56!important;font-size:12px!important;font-weight:400;line-height:1.45}
 .intent-detail strong{font-weight:600;color:#303641}
 .intent-detail em{font-style:normal;color:#07c160;font-weight:600}
@@ -104,15 +119,9 @@ button:hover{border-color:#c3c3cc}button:disabled{opacity:.55;cursor:wait}
 .empty small{display:block;font-size:13px}
 .cta{background:#07c160;color:#fff;border:0;border-radius:10px;padding:11px 24px;margin:16px 0 12px;font-weight:600;font-size:14px}
 .cta:hover{background:#06ad56}
-.drawer{position:absolute;top:0;right:0;bottom:0;width:376px;max-width:100%;background:#fff;border-left:1px solid #dcdcdc;padding:20px 22px;overflow-y:auto;transform:translateX(103%);transition:transform .2s ease;z-index:5}
-.drawer.open{transform:none}
 .drawer-head{position:absolute;top:14px;right:16px;display:flex;justify-content:flex-end;z-index:2}
-#relLabel{margin-top:0}
 .close{border:1px solid #d6d6e1;background:#fff;border-radius:8px;width:30px;height:30px;padding:0;flex:none;color:#686876;line-height:1}
-.drawer .hint{font-size:13px;color:#686876;line-height:1.6;margin:6px 0 0}
-.step{margin-top:18px}.stepl{display:block;font-size:13px;color:#686876;margin-bottom:8px}
-.chips{display:flex;flex-wrap:wrap;gap:8px}
-/* 关系选择：组标题（带绿色竖条、加粗深色）与子项 chips 是两种形态，层级一眼分开。 */
+#relLabel{margin-top:0}
 .field-label{display:block;margin:18px 0 8px;font-weight:600;font-size:13px}
 .rel-group{display:flex;align-items:center;gap:12px}
 .rel-group+.rel-group{margin-top:10px}
@@ -131,7 +140,6 @@ button:hover{border-color:#c3c3cc}button:disabled{opacity:.55;cursor:wait}
 .aug-btn.ghost:hover{background:#f3faf5}
 .aug-btn:disabled{opacity:.55;cursor:wait}
 #augHint{margin:6px 4px 0;font-size:13px;color:#8a5308;line-height:1.6}
-/* 追加消息弹窗 */
 .modal-mask{position:fixed;inset:0;background:rgba(20,24,32,.45);display:flex;align-items:center;justify-content:center;z-index:60;padding:20px}
 .modal{background:#fff;border-radius:14px;box-shadow:0 12px 40px rgba(20,24,32,.18);padding:20px;width:min(560px,92vw);max-height:82vh;overflow:auto}
 .modal h3{margin:0 0 8px;font-size:17px}
@@ -143,55 +151,73 @@ button:hover{border-color:#c3c3cc}button:disabled{opacity:.55;cursor:wait}
 #appendInput:focus{outline:none;border-color:#07c160}
 .drawer .muted{font-size:13px}
 </style>
-<header><div><b>恋爱职场大侦探</b></div><button type="button" id="drawerBtn">导入聊天</button></header>
-<main><div id="notice" class="notice" hidden></div>
-<div class="wx-wrap">
-<div class="wx">
-<aside class="wx-side"><div class="brand">微信</div><div class="wx-search">搜索</div>
-<div class="wx-item on"><div class="wx-av" id="sideAv">她</div><div><b id="sideName">她</b><small id="sidePreview">还没有聊天记录</small></div></div>
-<div class="wx-item"><div class="wx-av me">我</div><div><b style="color:#5a5a66">文件传输助手</b><small>—</small></div></div>
-</aside>
-<div class="wx-main">
-<div class="wx-title"><strong id="wxTitle">她</strong><small id="wxRel">关系/场景：未导入</small></div>
-<div class="wx-flow" id="results" aria-live="polite"></div>
-<div class="wx-bar"><div class="send-row"><button type="button" id="barCopy" class="reply-copy" hidden>复制</button><span>发送(S)</span></div><div id="replyDock" class="reply-dock" hidden></div></div>
-</div></div>
-<div class="drawer" id="drawer">
-<div class="drawer-head"><button type="button" class="close" id="drawerClose" aria-label="收起">×</button></div>
-<form id="chatForm" style="margin-top:0">
-<span class="field-label" id="relLabel">关系 / 场景（必选）</span>
-<input type="hidden" id="relationship" value="">
-<div id="relGroups" role="radiogroup" aria-labelledby="relLabel">
-  <div class="rel-group"><span class="rel-title">情感</span><div class="chips">
-    <button type="button" class="chip rel-chip" data-value="暧昧">暧昧</button>
-    <button type="button" class="chip rel-chip" data-value="恋爱">恋爱</button>
-  </div></div>
-  <div class="rel-group"><span class="rel-title">职场</span><div class="chips">
-    <button type="button" class="chip rel-chip" data-value="上下级">上下级</button>
-    <button type="button" class="chip rel-chip" data-value="同事">同事</button>
-  </div></div>
-</div>
-<label for="transcript">聊天记录</label><textarea id="transcript" maxlength="50000" required style="min-height:220px"></textarea>
-<div id="people" hidden>
-<div class="step" id="meStep"><span class="stepl">第 1 步 · 我是谁</span><div class="chips" id="meChips"></div></div>
-<div class="step" id="readStep"><span class="stepl">第 2 步 · 解读谁的消息</span><div class="chips" id="readChips"></div></div>
-</div>
-<div id="aiOptions" hidden>
-  <div class="toggle"><input type="checkbox" id="genInterpretation"><span><strong>生成潜台词</strong>（调用AI等待时间会变长）</span></div>
-  <div class="toggle"><input type="checkbox" id="genSuggestions"><span><strong>生成推荐回复</strong>（调用AI等待时间会变长）</span></div>
-</div>
-<button class="primary" id="submit">仅Jev分析（意图+情绪）</button><div id="status" role="status" aria-live="polite"></div>
-</form></div>
-</div>
-<div id="augmentBar" hidden>
-  <div class="aug-row">
-    <button type="button" id="augInterpret" class="aug-btn">生成潜台词</button>
-    <button type="button" id="augSuggest" class="aug-btn">生成推荐回复</button>
-    <button type="button" id="appendOpen" class="aug-btn ghost">继续记录这段对话</button>
+<div class="phone">
+  <div class="statusbar">
+    <span class="sb-time">9:41</span>
+    <span class="sb-island"></span>
+    <span class="sb-right">
+      <svg class="sb-signal" width="18" height="12" viewBox="0 0 18 12" fill="#1c1c1e" aria-hidden="true"><rect x="0" y="8" width="3" height="4" rx="1"/><rect x="5" y="5" width="3" height="7" rx="1"/><rect x="10" y="2.5" width="3" height="9.5" rx="1"/><rect x="15" y="0" width="3" height="12" rx="1"/></svg>
+      <svg class="sb-battery" width="26" height="12" viewBox="0 0 26 12" fill="none" aria-hidden="true"><rect x="0.5" y="0.5" width="21" height="11" rx="3" stroke="#1c1c1e" opacity=".35"/><rect x="2.5" y="2.5" width="14" height="7" rx="1.5" fill="#1c1c1e"/><rect x="23" y="4" width="2" height="4" rx="1" fill="#1c1c1e" opacity=".35"/></svg>
+    </span>
   </div>
-  <p class="muted" id="augHint" hidden></p>
+  <header class="appbar">
+    <div class="appbar-center">
+      <strong id="wxTitle">她</strong>
+      <small id="wxRel">关系/场景：未导入</small>
+    </div>
+    <button type="button" id="drawerBtn" class="appbar-more" aria-label="导入聊天">⋯</button>
+    <!-- 原侧栏联系人字段：JS 仍会更新，保留为隐藏元素避免报错 -->
+    <span id="sideName" hidden></span>
+    <span id="sideAv" hidden></span>
+    <span id="sidePreview" hidden></span>
+  </header>
+  <main class="appbody">
+    <div id="notice" class="notice" hidden></div>
+    <div class="wx-flow" id="results" aria-live="polite"></div>
+  </main>
+  <div id="augmentBar" hidden>
+    <div class="aug-row">
+      <button type="button" id="augInterpret" class="aug-btn">生成潜台词</button>
+      <button type="button" id="augSuggest" class="aug-btn">生成推荐回复</button>
+      <button type="button" id="appendOpen" class="aug-btn ghost">继续记录这段对话</button>
+    </div>
+    <p class="muted" id="augHint" hidden></p>
+  </div>
+  <div class="wx-bar">
+    <div id="replyDock" class="reply-dock" hidden></div>
+    <div class="send-row"><button type="button" id="barCopy" class="reply-copy" hidden>复制</button><span>发送(S)</span></div>
+  </div>
+  <div class="sheet" id="drawer">
+    <div class="sheet-grip"></div>
+    <div class="sheet-title">导入聊天</div>
+    <div class="drawer-head"><button type="button" class="close" id="drawerClose" aria-label="收起">×</button></div>
+    <form id="chatForm" style="margin-top:0">
+      <span class="field-label" id="relLabel">关系 / 场景（必选）</span>
+      <input type="hidden" id="relationship" value="">
+      <div id="relGroups" role="radiogroup" aria-labelledby="relLabel">
+        <div class="rel-group"><span class="rel-title">情感</span><div class="chips">
+          <button type="button" class="chip rel-chip" data-value="暧昧">暧昧</button>
+          <button type="button" class="chip rel-chip" data-value="恋爱">恋爱</button>
+        </div></div>
+        <div class="rel-group"><span class="rel-title">职场</span><div class="chips">
+          <button type="button" class="chip rel-chip" data-value="上下级">上下级</button>
+          <button type="button" class="chip rel-chip" data-value="同事">同事</button>
+        </div></div>
+      </div>
+      <label for="transcript">聊天记录</label><textarea id="transcript" maxlength="50000" required style="min-height:220px"></textarea>
+      <div id="people" hidden>
+        <div class="step" id="meStep"><span class="stepl">第 1 步 · 我是谁</span><div class="chips" id="meChips"></div></div>
+        <div class="step" id="readStep"><span class="stepl">第 2 步 · 解读谁的消息</span><div class="chips" id="readChips"></div></div>
+      </div>
+      <div id="aiOptions" hidden>
+        <div class="toggle"><input type="checkbox" id="genInterpretation"><span><strong>生成潜台词</strong>（调用AI等待时间会变长）</span></div>
+        <div class="toggle"><input type="checkbox" id="genSuggestions"><span><strong>生成推荐回复</strong>（调用AI等待时间会变长）</span></div>
+      </div>
+      <button class="primary" id="submit">仅Jev分析（意图+情绪）</button><div id="status" role="status" aria-live="polite"></div>
+    </form>
+  </div>
+  <div class="sheet-mask" id="sheetMask" onclick="closeDrawer()"></div>
 </div>
-</main>
 <div class="modal-mask" id="appendModal" hidden>
   <div class="modal" role="dialog" aria-modal="true" aria-label="继续记录这段对话">
     <h3>继续记录这段对话</h3>

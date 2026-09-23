@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>恋爱职场大侦探</title>
+<html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>恋爱职场大侦探-网页UI</title>
 <style>
 :root{font-family:system-ui,-apple-system,"PingFang SC",sans-serif;color:#202027;background:#f6f7fb;font-size:16px}*{box-sizing:border-box}html,body{height:100%}body{margin:0;display:flex;flex-direction:column}[hidden]{display:none!important}
 header{padding:16px 5vw;border-bottom:1px solid #dddde7;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;flex:none}header b{font-size:17px}
@@ -318,7 +318,9 @@ function syncPeople(){
       // 没有明确写「我」时不猜测角色；无论 1 人还是多人，
       // 第 2 步都不自动勾选，必须由用户明确选择分析对象。
       ME=people.find(p=>ME_WORDS.includes(p.label))?.label||null;
-      READ=new Set();
+      // 默认把识别到的人都列为分析对象；用户可以取消不想分析的人。
+      // “我是谁”仍然完全可选，不参与默认对象推断。
+      READ=new Set(people.map(p=>p.label));
     }
   }
   paintPeople();

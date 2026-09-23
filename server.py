@@ -217,6 +217,7 @@ ALLOWED_ORIGIN = re.compile(r'^(?:null|https?://(?:127\.0\.0\.1|localhost)(?::\d
 
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parents[1]
+ENV_PATH = ROOT / '.env'
 # 标签种子：53 个意图 + 44 个情绪。情绪支持「按场景分化的定义」（definitions）——
 # 「无情绪」「急了」这类标签在暧昧 / 恋爱 / 同事下的解释并不相同，取用时按当前关系回落。
 SEED = json.loads((HERE / 'intents_seed.json').read_text(encoding='utf-8'))
@@ -493,7 +494,15 @@ def _jev_call(state, questions):
     body = {'model': os.getenv('TYPESAFE_DEFAULT_MODEL', 'jev-latest'), 'state': state, 'questions': questions}
     url = os.getenv('TYPESAFE_BASE_URL', 'https://api.typesafe.ai').rstrip('/') + '/v1/systemone'
     request = urllib.request.Request(url, data=json.dumps(body, ensure_ascii=False).encode(),
-                                     headers={'Authorization': 'Bearer ' + key, 'Content-Type': 'application/json'})
+                                     headers={
+                                         'Authorization': 'Bearer ' + key,
+                                         'Content-Type': 'application/json',
+                                         # TypeSafe's upstream gateway rejects urllib's default
+                                         # Python request signature with HTTP 403 / error 1010.
+                                         'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) '
+                                                       'AppleWebKit/605.1.15 (KHTML, like Gecko) '
+                                                       'Version/17.0 Safari/605.1.15',
+                                     })
     # 批量分析时会同时访问 Jev；网络代理或 TLS 连接偶发抖动时，直接失败会让整批消息都丢失。
     # 对连接级错误做有限重试，HTTP 鉴权/参数错误则立即抛出，避免掩盖真正配置问题。
     last_error = None

@@ -150,7 +150,7 @@ def _parse_json_content(content):
     return None
 
 
-def call_general_llm(relationship, context, message, speaker, intent_result, emotion_result):
+def call_general_llm(relationship, context, message, speaker, intent_result, emotion_result, reply_author='我'):
     """用通用大模型（DeepSeek）按整段上下文生成：一句话解读 + 三个动态回复建议。
 
     Jev 只做意图/情绪分类（choice 型），不会自由生成；回复建议和解读交给这里。
@@ -162,16 +162,19 @@ def call_general_llm(relationship, context, message, speaker, intent_result, emo
     任何失败都抛 GeneralLLMError，由 evaluate_state 捕获后标记 gen_failed，不阻断分类结果。
     """
     key = os.getenv('DEEPSEEK_API_KEY')
+    count = _suggestion_count()
     if not key:
         raise GeneralLLMError('未配置 DeepSeek API key（请在 2026-09-JEV/.env 补 DEEPSEEK_API_KEY）')
     base = os.getenv('DEEPSEEK_BASE_URL', 'https://api.deepseek.com').rstrip('/')
     url = base + '/chat/completions'
     speaker_role = '我' if speaker == 'me' else '对方'
+    reply_author = reply_author or '我'
     system = (
-        '你是帮普通人聊天的助手。用户给你一段聊天记录，请你站在「我」（用户选定的角色）的角度，'
-        '基于整段聊天的上下文，给出「我接下来还想说点什么」的三个不同方向。输出严格的 JSON，字段：\n'
+        '你是帮普通人聊天的助手。用户已经明确选择了「我是谁」的角色。'
+        '你必须站在回复作者「{reply_author}」的角度，基于整段聊天上下文，'
+        '给出这个角色接下来还想说点什么，不得站到对方立场代替对方回答。输出严格的 JSON，字段：\n'
         '1. intent_detail：这句的「潜台词」（6-14 字大白话）——表面这句之下，实际想表达什么。\n'
-        '2. suggestions：长度为 3 的数组，每个元素含 label（2-6 个字的动作标签）和 text（一句能直接发出去的微信话术）。\n'
+        '2. suggestions：长度为 {count} 的数组，每个元素含 label（2-6 个字的动作标签）和 text（一句能直接发出去的微信话术）。\n'
         'intent_detail 的要求：\n'
         '- 称呼规则（必须遵守）：提到用户选定的那个角色一律写「我」，提到另一个人一律写「对方」；'
         '禁止出现「你」「您」「他」「她」——不要假设性别，也不要用第二人称。'
@@ -186,20 +189,20 @@ def call_general_llm(relationship, context, message, speaker, intent_result, emo
         '不要套用任何固定模板（例如不要总是「接住 / 推进 / 留空间」这套）；'
         'text 要像真人会发的微信——口语、简短、可直接复制发送，不要带引号、不要解释、不要换行；'
         '必须基于整段聊天上下文判断，不要只盯最后这一句；'
-        '关系/场景「{relationship}」作为宏观基调约束（语气和分寸按这个关系来）。\n'.format(relationship=relationship)
+        '关系/场景「{relationship}」作为宏观基调约束（语气和分寸按这个关系来）。\n'.format(relationship=relationship, count=count, reply_author=reply_author)
     )
     # 说话人只用于理解语境：无论最后一句是对方发的还是「我」自己发的，建议都站在「我」的立场、
     # 接着往下还能说点什么（回应 / 续说 / 改口 / 救场 等方向由模型按上下文自选）。
-    system += ('注意：「说话人」只说明最后一句是谁发的，用来理解语境；无论谁发的，建议始终是站在「我」的角度、'
-               '我接下来还想说什么，而不是教我回复我自己说过的话。\n')
+    system += ('注意：「说话人」只说明当前消息是谁发的，不等于回复作者；回复作者始终是「{reply_author}」。'
+               '无论当前消息是我还是对方发的，都只能生成「{reply_author}」接下来要发送的话，不能生成对方的回答。\n'.format(reply_author=reply_author))
     user = (
-        '关系/场景：{relationship}\n说话人：{speaker_role}\n'
+        '关系/场景：{relationship}\n当前消息说话人：{speaker_role}\n回复作者：{reply_author}\n'
         '聊天上下文（到当前消息之前）：\n{context}\n\n'
         '当前消息：{message}\n\n'
         'Jev 已判定的意图：{intent_label}（{intent_def}），分数 {intent_score}\n'
         'Jev 已判定的情绪：{emotion_label}（{emotion_def}），分数 {emotion_score}\n'
-        '请基于以上，给出 intent_detail 和 3 条 suggestions（严格 JSON，不要输出其他字段）。'
-    ).format(relationship=relationship, speaker_role=speaker_role,
+        '请基于以上，给出 intent_detail 和 {count} 条 suggestions（严格 JSON，不要输出其他字段）。'
+    ).format(relationship=relationship, count=count, speaker_role=speaker_role, reply_author=reply_author,
              context=context or '（无前文）', message=message,
              intent_label=intent_result.get('label', ''), intent_def=intent_result.get('definition', ''),
              intent_score=intent_result.get('score'),
@@ -268,7 +271,7 @@ def call_general_llm(relationship, context, message, speaker, intent_result, emo
     # 两个字段保留键名只为兼容旧前端，恒为空。
     intent_detail = str(parsed.get('intent_detail') or '').strip().replace('\n', '')[:24]
     suggestions = []
-    for s in (parsed.get('suggestions') or [])[:3]:
+    for s in (parsed.get('suggestions') or [])[:count]:
         if not isinstance(s, dict):
             continue
         label = str(s.get('label') or '').strip()
@@ -301,6 +304,112 @@ try:
             os.environ.setdefault(key.strip(), value.strip().strip('"').strip("'"))
 except FileNotFoundError:
     pass
+
+CONFIG_KEYS = ('TYPESAFE_BASE_URL', 'TYPESAFE_DEFAULT_MODEL', 'TYPESAFE_API_KEY',
+               'DEEPSEEK_BASE_URL', 'DEEPSEEK_MODEL', 'DEEPSEEK_API_KEY',
+               'GEN_SUGGESTIONS_COUNT')
+
+
+def _suggestion_count():
+    try:
+        return max(1, min(6, int(os.getenv('GEN_SUGGESTIONS_COUNT', '3'))))
+    except ValueError:
+        return 3
+
+
+def _masked_key(value):
+    if not value:
+        return {'configured': False, 'masked': ''}
+    return {'configured': True, 'masked': value[:5] + '…' + value[-4:]}
+
+
+def _config_snapshot():
+    jev_base = os.getenv('TYPESAFE_BASE_URL', 'https://api.typesafe.ai').rstrip('/')
+    gen_base = os.getenv('DEEPSEEK_BASE_URL', 'https://api.deepseek.com').rstrip('/')
+    return {'classification': {'base_url': jev_base,
+                               'endpoint': jev_base + '/v1/systemone',
+                               'model': os.getenv('TYPESAFE_DEFAULT_MODEL', 'jev-latest'),
+                               'api_key': _masked_key(os.getenv('TYPESAFE_API_KEY', ''))},
+            'generation': {'base_url': gen_base,
+                           'endpoint': gen_base + '/chat/completions',
+                           'model': os.getenv('DEEPSEEK_MODEL', 'deepseek-flash'),
+                           'api_key': _masked_key(os.getenv('DEEPSEEK_API_KEY', ''))},
+            'output': {'suggestions_count': _suggestion_count(), 'min': 1, 'max': 6},
+            'env_path': str(ENV_PATH)}
+
+
+def _save_config(updates):
+    lines = ENV_PATH.read_text(encoding='utf-8').splitlines() if ENV_PATH.exists() else []
+    seen = set()
+    out = []
+    for line in lines:
+        match = re.match(r'^\s*([A-Z][A-Z0-9_]*)\s*=.*$', line)
+        key = match.group(1) if match else None
+        if key in updates:
+            out.append('{}={}'.format(key, updates[key]))
+            seen.add(key)
+        else:
+            out.append(line)
+    for key, value in updates.items():
+        if key not in seen:
+            out.append('{}={}'.format(key, value))
+    ENV_PATH.write_text('\n'.join(out).rstrip() + '\n', encoding='utf-8')
+    for key, value in updates.items():
+        os.environ[key] = value
+
+
+def _config_updates(data):
+    updates = {}
+    groups = {'classification': {'base_url': 'TYPESAFE_BASE_URL', 'model': 'TYPESAFE_DEFAULT_MODEL', 'api_key': 'TYPESAFE_API_KEY'},
+              'generation': {'base_url': 'DEEPSEEK_BASE_URL', 'model': 'DEEPSEEK_MODEL', 'api_key': 'DEEPSEEK_API_KEY'},
+              'output': {'suggestions_count': 'GEN_SUGGESTIONS_COUNT'}}
+    for group, fields in groups.items():
+        section = data.get(group) or {}
+        if not isinstance(section, dict):
+            raise ValueError('配置格式不正确。')
+        for name, env_key in fields.items():
+            if name not in section or section[name] in (None, ''):
+                continue
+            value = str(section[name]).strip()
+            if name == 'base_url' and not value.startswith(('http://', 'https://')):
+                raise ValueError('接口地址要以 http:// 或 https:// 开头。')
+            if name == 'suggestions_count':
+                try:
+                    value = str(max(1, min(6, int(value))))
+                except ValueError:
+                    raise ValueError('推荐回复条数请填 1–6 的整数。') from None
+            updates[env_key] = value
+    return updates
+
+
+def _test_config(data):
+    updates = _config_updates(data)
+    old = {key: os.environ.get(key) for key in CONFIG_KEYS}
+    try:
+        for key, value in updates.items():
+            os.environ[key] = value
+        result = {'classification': {'ok': False}, 'generation': {'ok': False}}
+        try:
+            state = {'message': '在吗', 'context': '', 'relationship': '恋爱', 'speaker': 'other'}
+            _jev_call(state, {'ping': {'type': 'noul', 'instructions': '是否在表达时间紧迫？',
+                                       'criteria': {'true': '明确提到时间或急迫', 'false': '没有表达紧迫'}}})
+            result['classification'] = {'ok': True, 'detail': 'Jev 已连通'}
+        except Exception as exc:
+            result['classification'] = {'ok': False, 'detail': str(exc)}
+        try:
+            probe = call_general_llm('恋爱', '', '请回复“好”', 'other',
+                                     {'label': '简单回应', 'definition': '事务性回应', 'score': .8},
+                                     {'label': '无明显情绪', 'definition': '语气中性', 'score': .8})
+            result['generation'] = {'ok': bool(probe.get('suggestions')), 'detail': '生成层已连通'}
+        except Exception as exc:
+            result['generation'] = {'ok': False, 'detail': str(exc)}
+        return result
+    finally:
+        for key, value in old.items():
+            if value is None:
+                os.environ.pop(key, None)
+            else:
+                os.environ[key] = value
 
 # 二期关系词汇：与前端下拉、intents_seed.json 的 scenarios 完全一致。
 RELATIONSHIPS = ('暧昧', '恋爱', '上下级', '同事')
@@ -712,7 +821,8 @@ def evaluate_state(state, skip_gen=False):
     if not skip_gen:
         try:
             gen = call_general_llm(relationship, state.get('context', ''), state.get('message', ''),
-                                   state.get('speaker', 'other'), primary_intent, emotion_result)
+                                   state.get('speaker', 'other'), primary_intent, emotion_result,
+                                   state.get('reply_author') or '我')
         except GeneralLLMError as exc:
             print('[gen] 大模型生成失败：', exc, flush=True)
             gen = {'gen_failed': True, 'gen_error': str(exc)}
@@ -922,11 +1032,9 @@ def parse_transcript(text, me_label=None):
                    if line and not TS_RE.match(line) and not line.startswith('#')]   # 过滤夹在中间的时间行与标题行
             messages.append({'label': label, 'text': '\n'.join(body).strip(), 'timestamp': timestamp})
 
-    if me_label is None:
-        for label in candidates:
-            if label in ME_WORDS:
-                me_label = label
-                break
+    # “我是谁”只能由用户在界面明确选择；不能因为昵称叫“我”、只有一个人，
+    # 或者上下文像是在说本人，就替用户推断角色。未选择时所有消息均为 other，
+    # 前端统一显示在左侧灰色气泡。
     # 没有明确写出「我」时，不猜测角色。用户可能只想分析群聊，
     # 也可能本人根本没有在这段记录里发言；分析对象由 read_labels 明确选择。
     for item in messages:
@@ -985,6 +1093,8 @@ def analyze_transcript(data):
     # 勾选「AI 推荐回复」只对最后一条消息调 DeepSeek 出三个回复按钮。
     gen_interpretation = bool(data.get('gen_interpretation'))
     gen_suggestions = bool(data.get('gen_suggestions'))
+    if gen_suggestions and not me_label:
+        raise ValueError('生成推荐回复前，请先在「我是谁」中选择你的角色。')
     last_target_index = targets[-1]['index']
 
     def work(message, force_suggest=False):
@@ -1006,7 +1116,8 @@ def analyze_transcript(data):
             need_gen = gen_interpretation
         skip_gen = not need_gen
         result = evaluate_state({'message': message['text'], 'context': context,
-                                'relationship': relationship, 'speaker': message['speaker']},
+                                'relationship': relationship, 'speaker': message['speaker'],
+                                'reply_author': me_label},
                                 skip_gen=skip_gen)
         # 置信度旁路：低分或平票的样本攒进回流池，供人工审后决定补哪些标签。
         flags = confidence_flags(result)
@@ -1102,6 +1213,8 @@ def augment_transcript(data):
     gen_suggestions = bool(data.get('gen_suggestions'))
     if not (gen_interpretation or gen_suggestions):
         raise ValueError('请选择要生成的类型（逐条消息解读 或 生成推荐回复）。')
+    if gen_suggestions and not prev.get('me_label'):
+        raise ValueError('生成推荐回复前，请先在「我是谁」中选择你的角色。')
     # 推荐回复必须锚定全局最后一条消息（与 analyze_transcript 保持一致）。
     messages = prev.get('messages') or []
     if messages:
@@ -1128,7 +1241,8 @@ def augment_transcript(data):
     def _run(job):
         idx, ctx, msg, speaker_code, intent_result, emotion_result = job
         try:
-            gen = call_general_llm(relationship, ctx, msg, speaker_code, intent_result, emotion_result)
+            gen = call_general_llm(relationship, ctx, msg, speaker_code, intent_result, emotion_result,
+                                   prev.get('me_label') or '我')
             return idx, {'interpretation': gen.get('interpretation'),
                          'intent_detail': gen.get('intent_detail'),
                          'emotion_detail': gen.get('emotion_detail'),
@@ -1158,7 +1272,8 @@ def augment_transcript(data):
                 speaker_code = 'me' if rt.get('speaker') == '我' else 'other'
                 try:
                     gen = call_general_llm(relationship, rt.get('context', ''), rt.get('message', ''),
-                                           speaker_code, intent_result, emotion_result)
+                                           speaker_code, intent_result, emotion_result,
+                                           prev.get('me_label') or '我')
                     augmentations[str(last_index)] = {'interpretation': gen.get('interpretation'),
                                                       'intent_detail': gen.get('intent_detail'),
                                                       'emotion_detail': gen.get('emotion_detail'),
@@ -1329,6 +1444,8 @@ class Handler(BaseHTTPRequestHandler):
     def do_GET(self):
         if self.path == '/':
             self.send(200, (HERE / 'index.html').read_bytes(), 'text/html; charset=utf-8')
+        elif self.path == '/config':
+            self.send(200, _config_snapshot())
         elif self.path == '/health':
             key = os.getenv('TYPESAFE_API_KEY')
             gen_key = os.getenv('DEEPSEEK_API_KEY')
@@ -1343,7 +1460,7 @@ class Handler(BaseHTTPRequestHandler):
             self.send(404, {'error': '页面不存在'})
 
     def do_POST(self):
-        if self.path not in ('/analyze', '/analyze-chat', '/augment-chat', '/append-chat'):
+        if self.path not in ('/config', '/config/test', '/analyze', '/analyze-chat', '/augment-chat', '/append-chat'):
             return self.send(404, {'error': '接口不存在'})
         origin = self.headers.get('Origin')
         if (origin is not None and not ALLOWED_ORIGIN.match(origin)) or self.headers.get('Content-Type') != 'application/json':
@@ -1353,7 +1470,16 @@ class Handler(BaseHTTPRequestHandler):
             if not 0 < length <= 300000:
                 raise ValueError('输入过长或为空')
             data = json.loads(self.rfile.read(length))
-            result = (analyze_transcript(data) if self.path == '/analyze-chat'
+            if self.path == '/config':
+                updates = _config_updates(data)
+                if not updates:
+                    raise ValueError('没有需要保存的改动。')
+                _save_config(updates)
+                result = _config_snapshot()
+            elif self.path == '/config/test':
+                result = _test_config(data)
+            else:
+                result = (analyze_transcript(data) if self.path == '/analyze-chat'
                       else augment_transcript(data) if self.path == '/augment-chat'
                       else append_transcript(data) if self.path == '/append-chat'
                       else evaluate(data))

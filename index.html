@@ -14,6 +14,7 @@ button:hover{border-color:#c3c3cc}button:disabled{opacity:.55;cursor:wait}
 #drawerBtn{background:#fff;border:0;border-radius:6px;padding:9px 22px;font-size:14px;color:#202027;box-shadow:0 1px 2px rgba(0,0,0,.06)}
 #drawerBtn:hover{background:#f2f2f5;border:0;box-shadow:0 1px 3px rgba(0,0,0,.1)}
 #drawerBtn:focus-visible{outline:2px solid #c3c3cc;outline-offset:2px}
+.github-link{display:inline-flex;align-items:center;gap:6px;border:1px solid #d6d6e1;border-radius:10px;padding:9px 14px;background:#fff;color:#202027;text-decoration:none;font-size:14px;box-shadow:0 1px 2px rgba(0,0,0,.04)}.github-link:hover{background:#f2f2f5;border-color:#c3c3cc}
 .primary{background:#07c160;color:white;border:0;width:100%;padding:14px;margin-top:22px;font-weight:600;font-size:13px}
 .primary:hover{background:#06ad56}
 #status{min-height:24px;margin-top:12px;font-size:13px;color:#6b6b78}
@@ -142,8 +143,9 @@ button:hover{border-color:#c3c3cc}button:disabled{opacity:.55;cursor:wait}
 #appendInput{width:100%;min-height:140px;box-sizing:border-box;font:inherit;font-size:14px;line-height:1.5;border:1px solid #d6d6e1;border-radius:10px;padding:10px;resize:vertical}
 #appendInput:focus{outline:none;border-color:#07c160}
 .drawer .muted{font-size:13px}
+.settings-modal{width:min(760px,94vw);max-height:90vh}.settings-head{display:flex;justify-content:space-between;align-items:center}.settings-head h3{margin:0;font-size:20px}.settings-tabs{display:flex;gap:0;margin:18px 0 14px;background:#eef0f4;border-radius:12px;padding:3px}.settings-tab{flex:1;border:0;background:transparent;border-radius:9px;padding:10px;color:#686876}.settings-tab.on{background:#fff;color:#202027;font-weight:600;box-shadow:0 1px 3px #ccd0d8}.cfg-section{border:1px solid #e1e3e9;border-radius:14px;padding:18px 20px}.cfg-section h4{margin:0 0 14px;font-size:16px}.cfg-endpoint{float:right;background:#f0f1f5;color:#687080;border-radius:8px;padding:5px 8px;font:12px ui-monospace,monospace;max-width:55%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.cfg-field{display:grid;grid-template-columns:90px 1fr;gap:12px;align-items:center;margin:12px 0}.cfg-field label{margin:0;text-align:right;font-size:14px}.cfg-field input{width:100%;font:inherit;border:1px solid #d6d6e1;border-radius:10px;padding:10px;background:#fff}.cfg-note{font-size:13px;color:#686876;line-height:1.6;margin:12px 0 0}.cfg-path{font-size:12px;color:#8a8f9a;line-height:1.5;margin:14px 0 0}.cfg-actions{display:flex;justify-content:flex-end;align-items:center;gap:10px;margin-top:16px}.cfg-status{flex:1;font-size:13px;color:#0a7a3f}.cfg-status.err{color:#a12b32}
 </style>
-<header><div><b>恋爱职场大侦探</b></div><button type="button" id="drawerBtn">导入聊天</button></header>
+<header><div><b>恋爱职场大侦探</b></div><div style="display:flex;gap:8px;align-items:center"><a class="github-link" href="https://github.com/GracieZGC/jev-chat-analyzer" target="_blank" rel="noopener noreferrer" aria-label="打开 GitHub 仓库">GitHub</a><button type="button" id="settingsBtn">配置</button><button type="button" id="drawerBtn">导入聊天</button></div></header>
 <main><div id="notice" class="notice" hidden></div>
 <div class="wx-wrap">
 <div class="wx">
@@ -204,6 +206,16 @@ button:hover{border-color:#c3c3cc}button:disabled{opacity:.55;cursor:wait}
     </div>
   </div>
 </div>
+<div class="modal-mask" id="settingsModal" hidden>
+<div class="modal settings-modal" role="dialog" aria-modal="true" aria-label="配置">
+<div class="settings-head"><h3>配置</h3><button type="button" class="close" id="settingsClose">×</button></div>
+<p class="muted">分类层（Jev）判定意图与情绪，生成层（OpenAI 兼容）写潜台词与回复建议。保存后立即生效，不需要重启服务。</p>
+<div class="settings-tabs"><button type="button" class="settings-tab on" data-tab="classification">分类层</button><button type="button" class="settings-tab" data-tab="generation">生成层</button><button type="button" class="settings-tab" data-tab="output">输出设置</button></div>
+<section class="cfg-section" data-pane="classification"><span class="cfg-endpoint" id="cfgClassificationEndpoint"></span><h4>分类层 · Jev</h4><div class="cfg-field"><label>接口地址</label><input id="cfgTypesafeBase" /></div><div class="cfg-field"><label>模型</label><input id="cfgTypesafeModel" /></div><div class="cfg-field"><label>API Key</label><input id="cfgTypesafeKey" placeholder="已配置（留空 = 不改动）" /></div><p class="cfg-note">只写主机名会自动补 /v1/systemone；写完整端点则原样使用。</p></section>
+<section class="cfg-section" data-pane="generation" hidden><span class="cfg-endpoint" id="cfgGenerationEndpoint"></span><h4>生成层 · OpenAI 兼容</h4><div class="cfg-field"><label>接口地址</label><input id="cfgDeepseekBase" /></div><div class="cfg-field"><label>模型</label><input id="cfgDeepseekModel" /></div><div class="cfg-field"><label>API Key</label><input id="cfgDeepseekKey" placeholder="已配置（留空 = 不改动）" /></div><p class="cfg-note">支持 DeepSeek、OpenAI、通义千问、智谱、Kimi 或本地 Ollama 等兼容端点。</p></section>
+<section class="cfg-section" data-pane="output" hidden><h4>输出设置</h4><div class="cfg-field"><label>推荐回复条数</label><input id="cfgSuggestionCount" type="number" min="1" max="6" /></div><p class="cfg-note">控制最后一条消息生成几种回复方向，范围 1–6。</p></section>
+<p class="cfg-path" id="cfgPath"></p><div class="cfg-actions"><span class="cfg-status" id="cfgStatus"></span><button type="button" id="cfgTest">测试连接</button><button type="button" id="cfgSave" class="primary" style="width:auto;margin:0">保存</button></div>
+</div></div>
 <script>
 const $=id=>document.getElementById(id);
 function el(tag,text,cls){const node=document.createElement(tag);if(text!==undefined)node.textContent=text;if(cls)node.className=cls;return node;}
@@ -311,13 +323,13 @@ function syncPeople(){
     if(!people.length){ME=null;READ=new Set();USER_TOUCHED=false;}
     else if(USER_TOUCHED){
       // 用户改过：他说的话优先保留，只剔除这次对话里已经没有的人。
-      if(!(ME&&people.some(p=>p.label===ME)))ME=people.find(p=>ME_WORDS.includes(p.label))?.label||null;
+      if(!(ME&&people.some(p=>p.label===ME)))ME=null;
       READ=new Set(people.filter(p=>rememberedRead.includes(p.label)).map(p=>p.label));
       // 单人时也必须由用户明确选择第 2 步的分析对象，不自动替他勾选。
     }else{
       // 没有明确写「我」时不猜测角色；无论 1 人还是多人，
       // 第 2 步都不自动勾选，必须由用户明确选择分析对象。
-      ME=people.find(p=>ME_WORDS.includes(p.label))?.label||null;
+      ME=null;
       // 默认把识别到的人都列为分析对象；用户可以取消不想分析的人。
       // “我是谁”仍然完全可选，不参与默认对象推断。
       READ=new Set(people.map(p=>p.label));
@@ -459,8 +471,9 @@ function renderChat(data){
   const byIndex={};for(const item of data.analyses)byIndex[item.index]=item;
   for(const m of data.messages){
     const mine=m.speaker==='me';
+    const speakerLabel=m.label|| (mine?NAMES.me:NAMES.other);
     const row=el('div',undefined,'row'+(mine?' me':''));
-    row.append(el('div',(mine?NAMES.me:NAMES.other).slice(0,1),'wx-av'+(mine?' me':'')));
+    row.append(el('div',speakerLabel.slice(0,1),'wx-av'+(mine?' me':'')));
     const col=el('div',undefined,'col');
     col.append(el('div',m.text,'bub'));
     const item=byIndex[m.index];
@@ -509,6 +522,15 @@ async function callAPI(path,options){
   }
   return data;
 }
+function cfgSetStatus(text,err=false){$('cfgStatus').textContent=text||'';$('cfgStatus').className='cfg-status'+(err?' err':'');}
+function cfgPayload(){return {classification:{base_url:$('cfgTypesafeBase').value,model:$('cfgTypesafeModel').value,api_key:$('cfgTypesafeKey').value},generation:{base_url:$('cfgDeepseekBase').value,model:$('cfgDeepseekModel').value,api_key:$('cfgDeepseekKey').value},output:{suggestions_count:$('cfgSuggestionCount').value}};}
+function cfgFill(data){const c=data.classification,g=data.generation;$('cfgTypesafeBase').value=c.base_url;$('cfgTypesafeModel').value=c.model;$('cfgDeepseekBase').value=g.base_url;$('cfgDeepseekModel').value=g.model;$('cfgSuggestionCount').value=data.output.suggestions_count;$('cfgTypesafeKey').value='';$('cfgDeepseekKey').value='';$('cfgTypesafeKey').placeholder=c.api_key.configured?'已配置 '+c.api_key.masked+'（留空 = 不改动）':'未配置，请填写';$('cfgDeepseekKey').placeholder=g.api_key.configured?'已配置 '+g.api_key.masked+'（留空 = 不改动）':'未配置，请填写';$('cfgClassificationEndpoint').textContent=c.endpoint;$('cfgGenerationEndpoint').textContent=g.endpoint;$('cfgPath').textContent='写入文件：'+data.env_path+'（密钥只保存本地，界面不显示明文）';}
+async function cfgOpen(){ $('settingsModal').hidden=false;cfgSetStatus('正在读取…');try{const data=await callAPI('/config');cfgFill(data);cfgSetStatus('');}catch(err){cfgSetStatus(err.message,true);}}
+function cfgClose(){$('settingsModal').hidden=true;}
+$('settingsBtn').onclick=cfgOpen;$('settingsClose').onclick=cfgClose;$('settingsModal').onclick=e=>{if(e.target===$('settingsModal'))cfgClose();};
+document.querySelectorAll('.settings-tab').forEach(btn=>btn.onclick=()=>{document.querySelectorAll('.settings-tab').forEach(b=>b.classList.toggle('on',b===btn));document.querySelectorAll('[data-pane]').forEach(p=>p.hidden=p.dataset.pane!==btn.dataset.tab);});
+$('cfgSave').onclick=async()=>{cfgSetStatus('正在保存…');$('cfgSave').disabled=true;try{const data=await callAPI('/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(cfgPayload())});cfgFill(data);cfgSetStatus('已保存，立即生效（不用重启）。');probe();}catch(err){cfgSetStatus(err.message,true);}finally{$('cfgSave').disabled=false;}};
+$('cfgTest').onclick=async()=>{cfgSetStatus('正在测试连接…');$('cfgTest').disabled=true;try{const r=await callAPI('/config/test',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(cfgPayload())});const a=r.classification,b=r.generation;cfgSetStatus((a.ok?'Jev 已连通':'Jev 失败：'+a.detail)+'；'+(b.ok?'生成层已连通':'生成层失败：'+b.detail),!(a.ok&&b.ok));}catch(err){cfgSetStatus(err.message,true);}finally{$('cfgTest').disabled=false;}};
 async function probe(){
   try{
     const h=await callAPI('/health');
@@ -542,6 +564,7 @@ $('submit').disabled=true;$('status').className='';
 const total=targets.reduce((s,p)=>s+p.count,0);
 const genInterp=$('genInterpretation').checked;
 const genSugg=$('genSuggestions').checked;
+if(genSugg&&!ME){notice('生成推荐回复前，请先在第 1 步选择「我是谁」。');return;}
 let statusParts=['正在 Jev 分类'];
 if(genInterp)statusParts.push('DeepSeek 潜台词');
 if(genSugg)statusParts.push('DeepSeek 推荐回复');
@@ -576,15 +599,16 @@ $('transcript').addEventListener('input',checkDirty);
 function setAugBusy(on){
   $('augInterpret').disabled=on;
   $('augSuggest').disabled=on||($('transcript').value!==analyzedText);
-  $('status').className='';
-  $('status').textContent=on?'AI 正在生成，请稍候…':'';
+  if(on){$('augHint').hidden=false;$('augHint').textContent='AI 正在生成，请稍候…';}
 }
 async function augment(genInterp,genSugg){
   if(!lastData)return;
+  if(genSugg&&!lastData.me_label){notice('生成推荐回复前，请先在第 1 步选择「我是谁」。');return;}
   setAugBusy(true);
   // 只回传后端补跑 DeepSeek 需要的字段（Jev 已判定的意图/情绪标签 + 上下文），不重传整份结果。
   const slim={
     relationship:lastData.relationship,
+    me_label:lastData.me_label,
     messages:lastData.messages,
     reply_target:lastData.reply_target,
     analyses:lastData.analyses.map(a=>({
@@ -625,10 +649,9 @@ async function augment(genInterp,genSugg){
     if(resp.gen_suggestions)lastData.gen_suggestions=true;
     renderChat(lastData);
     const what=genInterp&&genSugg?'潜台词 + 推荐回复':(genInterp?'潜台词':'推荐回复');
-    $('status').textContent=failed?('「'+what+'」完成，但有 '+failed+' 条生成失败（可重试）。'):(what+'完成。');
+    notice(failed?('「'+what+'」完成，但有 '+failed+' 条生成失败（可重试）。'):(what+'完成。'));
   }catch(err){
-    if(err.kind==='app'){$('status').className='err';$('status').textContent=err.message;}
-    else{$('status').className='';$('status').textContent='';notice(err.message);}
+    notice(err.message);
   }finally{setAugBusy(false);checkDirty();}
 }
 $('augInterpret').onclick=()=>augment(true,false);
